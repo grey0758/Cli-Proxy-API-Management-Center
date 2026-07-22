@@ -4,6 +4,7 @@ import { ProvidersWorkbenchPage } from '@/features/providers/ProvidersWorkbenchP
 import { AuthFilesPage } from '@/pages/AuthFilesPage';
 import { AuthFilesOAuthExcludedEditPage } from '@/pages/AuthFilesOAuthExcludedEditPage';
 import { AuthFilesOAuthModelAliasEditPage } from '@/pages/AuthFilesOAuthModelAliasEditPage';
+import { AccountPoolPage } from '@/pages/AccountPoolPage';
 import { OAuthPage } from '@/pages/OAuthPage';
 import { QuotaPage } from '@/pages/QuotaPage';
 import { PluginResourcePage } from '@/features/plugins/PluginResourcePage';
@@ -26,6 +27,7 @@ const createMainRoutes = (supportsPlugin: boolean) => [
   { path: '/auth-files', element: <AuthFilesPage /> },
   { path: '/auth-files/oauth-excluded', element: <AuthFilesOAuthExcludedEditPage /> },
   { path: '/auth-files/oauth-model-alias', element: <AuthFilesOAuthModelAliasEditPage /> },
+  { path: '/account-pool', element: <AccountPoolPage /> },
   { path: '/oauth', element: <OAuthPage /> },
   { path: '/quota', element: <QuotaPage /> },
   ...(supportsPlugin

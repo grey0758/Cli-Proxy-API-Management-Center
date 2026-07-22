@@ -11,6 +11,7 @@ import { obfuscatedStorage } from '@/services/storage/secureStorage';
 import { apiClient } from '@/services/api/client';
 import { versionApi } from '@/services/api/version';
 import { useConfigStore } from './useConfigStore';
+import { useAccountPoolStore } from './useAccountPoolStore';
 import { useModelsStore } from './useModelsStore';
 import { useQuotaStore } from './useQuotaStore';
 import { detectApiBaseFromLocation, normalizeApiBase } from '@/utils/connection';
@@ -156,6 +157,7 @@ export const useAuthStore = create<AuthStoreState>()(
       logout: () => {
         restoreSessionPromise = null;
         useConfigStore.getState().clearCache();
+        useAccountPoolStore.getState().clearAccounts();
         useModelsStore.getState().clearCache();
         useQuotaStore.getState().clearQuotaCache();
         set({

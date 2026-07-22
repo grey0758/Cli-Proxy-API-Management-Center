@@ -16,6 +16,7 @@ import { MainRoutes } from '@/router/MainRoutes';
 import { pluginsApi } from '@/services/api';
 import {
   IconSidebarAuthFiles,
+  IconSidebarAccountPool,
   IconSidebarConfig,
   IconSidebarDashboard,
   IconSidebarLogs,
@@ -53,6 +54,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   quickStart: <IconSidebarQuickStart size={18} />,
   aiProviders: <IconSidebarProviders size={18} />,
   authFiles: <IconSidebarAuthFiles size={18} />,
+  accountPool: <IconSidebarAccountPool size={18} />,
   oauth: <IconSidebarOauth size={18} />,
   quota: <IconSidebarQuota size={18} />,
   plugins: <IconSidebarPlugins size={18} />,
@@ -551,6 +553,12 @@ export function MainLayout() {
           labelKey: 'nav.auth_files',
           metaKey: 'nav_meta.auth_files',
           icon: sidebarIcons.authFiles,
+        },
+        {
+          path: '/account-pool',
+          labelKey: 'nav.account_pool',
+          metaKey: 'nav_meta.account_pool',
+          icon: sidebarIcons.accountPool,
         },
         {
           path: '/oauth',
