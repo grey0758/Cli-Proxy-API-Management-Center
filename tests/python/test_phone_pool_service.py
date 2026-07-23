@@ -57,20 +57,20 @@ class PhonePoolServiceTests(unittest.TestCase):
         self.temp_directory.cleanup()
 
     def test_normalizes_supported_us_phone_forms(self):
-        self.assertEqual(phone_pool_service.normalize_phone('443-857-5076'), '+14438575076')
-        self.assertEqual(phone_pool_service.normalize_phone('13464738881'), '+13464738881')
-        self.assertEqual(phone_pool_service.normalize_phone('+1 215 459 7144'), '+12154597144')
+        self.assertEqual(phone_pool_service.normalize_phone('202-555-0101'), '+12025550101')
+        self.assertEqual(phone_pool_service.normalize_phone('12025550102'), '+12025550102')
+        self.assertEqual(phone_pool_service.normalize_phone('+1 202 555 0103'), '+12025550103')
         with self.assertRaisesRegex(phone_pool_service.PhonePoolError, 'invalid_phone'):
-            phone_pool_service.normalize_phone('call-me-at-4438575076')
+            phone_pool_service.normalize_phone('call-me-at-2025550104')
 
     def test_import_snapshot_never_returns_provider_url(self):
         snapshot = self.repository.import_source(
-            '4438575076----https://provider.example/sms?token=example-token',
+            '2025550101----https://provider.example/sms?token=example-token',
             baseline_bindings=3,
         )
         self.assertEqual(snapshot['count'], 1)
         self.assertEqual(snapshot['enabled_count'], 1)
-        self.assertEqual(snapshot['phones'][0]['number'], '+14438575076')
+        self.assertEqual(snapshot['phones'][0]['number'], '+12025550101')
         self.assertEqual(snapshot['phones'][0]['binding_count'], 3)
         self.assertNotIn('sms_url', json.dumps(snapshot))
         self.assertNotIn('example-token', json.dumps(snapshot))
@@ -80,8 +80,8 @@ class PhonePoolServiceTests(unittest.TestCase):
         snapshot = self.repository.import_source(
             '\n'.join(
                 [
-                    '4438575076|https://provider.example/a?token=example-token',
-                    '7209875645|https://provider.example/b?token=example-token',
+                    '2025550101|https://provider.example/a?token=example-token',
+                    '2025550102|https://provider.example/b?token=example-token',
                 ]
             ),
             baseline_bindings=3,
@@ -108,7 +108,7 @@ class PhonePoolServiceTests(unittest.TestCase):
 
     def test_request_code_uses_current_binding_and_returns_no_url(self):
         snapshot = self.repository.import_source(
-            '4438575076|https://provider.example/sms?token=example-token',
+            '2025550101|https://provider.example/sms?token=example-token',
             baseline_bindings=3,
         )
         self.repository.bind('first@example.com', snapshot['phones'][0]['id'])
@@ -119,7 +119,7 @@ class PhonePoolServiceTests(unittest.TestCase):
 
     def test_rejects_unknown_accounts_and_disabled_phones(self):
         snapshot = self.repository.import_source(
-            '4438575076|https://provider.example/sms?token=example-token',
+            '2025550101|https://provider.example/sms?token=example-token',
             baseline_bindings=3,
         )
         phone_id = snapshot['phones'][0]['id']
@@ -162,7 +162,7 @@ class PhonePoolServiceTests(unittest.TestCase):
 
     def test_private_file_mode_is_enforced(self):
         self.repository.import_source(
-            '4438575076|https://provider.example/sms?token=example-token',
+            '2025550101|https://provider.example/sms?token=example-token',
             baseline_bindings=3,
         )
         self.state_path.chmod(0o644)

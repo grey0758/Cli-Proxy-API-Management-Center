@@ -15,6 +15,11 @@ route and the phone controls in `/account-pool`.
   size.
 - Provider response text is token-redacted and must be rendered by the
   frontend as escaped text.
+- Production may serve `management.html` from a host-managed file such as
+  `/srv/cliproxy-management/management.html` instead of the container writable
+  layer. Keep that file outside the phone-pool state directory, install it
+  atomically, return `Cache-Control: no-store`, and retain the old container
+  asset as rollback material.
 
 ## API
 

@@ -14,7 +14,7 @@ const snapshotPayload = {
   phones: [
     {
       id: 'phone_one',
-      number: '+14438575076',
+      number: '+12025550101',
       enabled: true,
       baseline_bindings: 3,
       recorded_bindings: 1,
@@ -23,7 +23,7 @@ const snapshotPayload = {
     },
     {
       id: 'phone_two',
-      number: '+17209875645',
+      number: '+12025550102',
       enabled: false,
       baseline_bindings: 3,
       recorded_bindings: 0,
@@ -79,7 +79,7 @@ describe('phone pool API payloads', () => {
     expect(() =>
       normalizePhonePoolSmsResponse({
         phone_id: 'phone_one',
-        number: '+14438575076',
+        number: '+12025550101',
         provider_status: 200,
         content_type: 'application/json',
         body: '{}',
@@ -93,7 +93,7 @@ describe('phone pool API payloads', () => {
   test('normalizes an escaped text response without interpreting HTML', () => {
     const response = normalizePhonePoolSmsResponse({
       phone_id: 'phone_one',
-      number: '+14438575076',
+      number: '+12025550101',
       provider_status: 200,
       content_type: 'text/plain',
       body: '<script>alert(1)</script>',
