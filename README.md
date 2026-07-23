@@ -79,7 +79,7 @@ Check the CLI Proxy API server documentation/config comments for the full authen
   - Gemini/Codex/Claude/Vertex key entries (base URL, headers, proxy, model aliases, excluded models, prefix).
   - OpenAI-compatible providers (multiple API keys, custom headers, model alias import via `/v1/models`, optional browser-side "chat/completions" test).
 - **Auth Files**: upload/download/delete JSON credentials, filter/search/pagination, runtime-only indicators, view supported models per credential (when the server supports it), manage OAuth excluded models (supports `*` wildcards), configure OAuth model alias mappings.
-- **Pending Account Pool**: locally load a `cami-list.html`, text, or JSON account list before import; search, mask/reveal, copy, remove, and generate TOTP codes. Credentials remain in page memory only and are cleared on refresh or logout; this page does not perform the CLIProxy import.
+- **Pending Account Pool**: locally load one or more `cami-list.html`, text, or JSON account lists before import; files are merged and de-duplicated in selection order, with search, mask/reveal, copy, remove, and TOTP codes. Credentials remain in page memory only and are cleared on refresh or logout; this page does not perform the CLIProxy import.
 - **OAuth**: start OAuth/device flows for Codex, Anthropic/Claude, Antigravity, Kimi, and xAI/Grok; poll status; submit callback URLs or xAI/Grok displayed codes; import Vertex JSON credentials and iFlow cookies.
 - **Quota Management**: manage quota limits and usage for Claude, Antigravity, Codex, Kimi, xAI/Grok, and other providers.
 - **Logs**: tail logs with incremental polling, auto-refresh, search, hide management traffic, clear logs; download request error log files.

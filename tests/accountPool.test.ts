@@ -3,6 +3,7 @@ import {
   AccountPoolSourceError,
   extractAccountPoolLines,
   parseAccountPoolSource,
+  parseAccountPoolSources,
 } from '../src/features/accountPool/accountPool';
 import { generateTotp, normalizeTotpSecret } from '../src/features/accountPool/totp';
 
@@ -80,6 +81,70 @@ describe('pending account pool source parsing', () => {
     ).join('\n');
 
     expect(() => parseAccountPoolSource(source)).toThrow('too_many_accounts');
+  });
+
+  test('merges multiple files and removes duplicates across their boundaries', () => {
+    const result = parseAccountPoolSources([
+      {
+        name: 'first.html',
+        source: `<!doctype html><script>const rawLines = [
+          "first@example.com|pass-1|JBSWY3DPEHPK3PXP",
+          "shared@example.com|pass-2|JBSWY3DPEHPK3PXP"
+        ];</script>`,
+      },
+      {
+        name: 'second.html',
+        source: `<!doctype html><script>const rawLines = [
+          "shared@example.com|pass-2|JBSWY3DPEHPK3PXP",
+          "second@example.com|pass-3|JBSWY3DPEHPK3PXP"
+        ];</script>`,
+      },
+    ]);
+
+    expect(result.accounts.map((account) => account.email)).toEqual([
+      'first@example.com',
+      'shared@example.com',
+      'second@example.com',
+    ]);
+    expect(result.duplicateCount).toBe(1);
+    expect(result.issues).toEqual([]);
+  });
+
+  test('preserves source names for invalid rows in multi-file imports', () => {
+    const result = parseAccountPoolSources([
+      {
+        name: 'first.txt',
+        source: 'first@example.com|pass|JBSWY3DPEHPK3PXP',
+      },
+      {
+        name: 'second.txt',
+        source: 'not-a-row',
+      },
+    ]);
+
+    expect(result.accounts).toHaveLength(1);
+    expect(result.issues).toEqual([
+      {
+        line: 1,
+        reason: 'format',
+        sourceName: 'second.txt',
+      },
+    ]);
+  });
+
+  test('enforces the unique account safety limit across multiple files', () => {
+    const source = (start: number, count: number) =>
+      Array.from(
+        { length: count },
+        (_, index) => `account-${start + index}@example.com|pass-${start + index}|JBSWY3DPEHPK3PXP`
+      ).join('\n');
+
+    expect(() =>
+      parseAccountPoolSources([
+        { name: 'first.txt', source: source(0, 600) },
+        { name: 'second.txt', source: source(600, 600) },
+      ])
+    ).toThrow('too_many_accounts');
   });
 });
 

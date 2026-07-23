@@ -22,8 +22,9 @@ import {
 import {
   ACCOUNT_POOL_MAX_ACCOUNTS,
   AccountPoolSourceError,
-  parseAccountPoolSource,
-  type AccountPoolParseIssue,
+  parseAccountPoolSources,
+  type AccountPoolNamedParseIssue,
+  type AccountPoolNamedSource,
 } from '@/features/accountPool/accountPool';
 import { formatTotp, generateTotp, TOTP_PERIOD_SECONDS } from '@/features/accountPool/totp';
 import { useAccountPoolStore, useNotificationStore } from '@/stores';
@@ -40,8 +41,10 @@ const maskSecret = (value: string): string => {
   return `${value.slice(0, 4)}  ${'•'.repeat(10)}  ${value.slice(-4)}`;
 };
 
-const formatIssueLines = (issues: AccountPoolParseIssue[]): string => {
-  const shown = issues.slice(0, 8).map((issue) => issue.line);
+const formatIssueLines = (issues: AccountPoolNamedParseIssue[]): string => {
+  const shown = issues
+    .slice(0, 8)
+    .map((issue) => (issue.sourceName ? `${issue.sourceName}:${issue.line}` : String(issue.line)));
   return `${shown.join(', ')}${issues.length > shown.length ? ', …' : ''}`;
 };
 
@@ -111,10 +114,10 @@ export function AccountPoolPage() {
     [t]
   );
 
-  const importSource = useCallback(
-    (source: string, nextSourceName = ''): string | null => {
+  const importSources = useCallback(
+    (sources: AccountPoolNamedSource[], nextSourceName = ''): string | null => {
       try {
-        const result = parseAccountPoolSource(source);
+        const result = parseAccountPoolSources(sources);
         if (result.issues.length > 0) {
           return t('account_pool.errors.invalid_lines', {
             lines: formatIssueLines(result.issues),
@@ -147,24 +150,30 @@ export function AccountPoolPage() {
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
+      const files = Array.from(event.target.files ?? []);
       event.target.value = '';
-      if (!file) return;
+      if (files.length === 0) return;
 
-      if (file.size > MAX_SOURCE_BYTES) {
+      const totalBytes = files.reduce((sum, file) => sum + file.size, 0);
+      if (files.some((file) => file.size > MAX_SOURCE_BYTES) || totalBytes > MAX_SOURCE_BYTES) {
         setPageError(t('account_pool.errors.file_too_large'));
         return;
       }
 
       try {
-        const content = await file.text();
-        const error = importSource(content, file.name);
+        const contents = await Promise.all(files.map((file) => file.text()));
+        const sources = files.map((file, index) => ({
+          name: file.name,
+          source: contents[index],
+        }));
+        const sourceLabel = files.map((file) => file.name).join(', ');
+        const error = importSources(sources, sourceLabel);
         setPageError(error ?? '');
       } catch {
         setPageError(t('account_pool.errors.read_failed'));
       }
     },
-    [importSource, t]
+    [importSources, t]
   );
 
   const handlePasteImport = useCallback(() => {
@@ -173,7 +182,7 @@ export function AccountPoolPage() {
       return;
     }
 
-    const error = importSource(draft);
+    const error = importSources([{ name: '', source: draft }]);
     if (error) {
       setImportError(error);
       return;
@@ -182,7 +191,7 @@ export function AccountPoolPage() {
     setDraft('');
     setImportError('');
     setPasteModalOpen(false);
-  }, [draft, importSource, t]);
+  }, [draft, importSources, t]);
 
   const handleCopy = useCallback(
     async (value: string, label: string) => {
@@ -226,6 +235,7 @@ export function AccountPoolPage() {
         type="file"
         className={styles.hiddenFileInput}
         accept={ACCEPTED_FILE_TYPES}
+        multiple
         onChange={handleFileChange}
       />
 

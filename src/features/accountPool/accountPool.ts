@@ -19,6 +19,21 @@ export interface AccountPoolParseResult {
   duplicateCount: number;
 }
 
+export interface AccountPoolNamedSource {
+  name: string;
+  source: string;
+}
+
+export interface AccountPoolNamedParseIssue extends AccountPoolParseIssue {
+  sourceName: string;
+}
+
+export interface AccountPoolMultiParseResult {
+  accounts: PendingAccountInput[];
+  issues: AccountPoolNamedParseIssue[];
+  duplicateCount: number;
+}
+
 export type AccountPoolSourceErrorCode =
   'embedded_list_missing' | 'embedded_list_invalid' | 'json_list_invalid' | 'too_many_accounts';
 
@@ -112,6 +127,43 @@ export function parseAccountPoolSource(source: string): AccountPoolParseResult {
 
     seen.add(identity);
     accounts.push({ email, password, secret });
+  });
+
+  if (accounts.length > ACCOUNT_POOL_MAX_ACCOUNTS) {
+    throw new AccountPoolSourceError('too_many_accounts');
+  }
+
+  return { accounts, issues, duplicateCount };
+}
+
+export function parseAccountPoolSources(
+  sources: AccountPoolNamedSource[]
+): AccountPoolMultiParseResult {
+  const accounts: PendingAccountInput[] = [];
+  const issues: AccountPoolNamedParseIssue[] = [];
+  const seen = new Set<string>();
+  let duplicateCount = 0;
+
+  sources.forEach(({ name, source }) => {
+    const result = parseAccountPoolSource(source);
+    duplicateCount += result.duplicateCount;
+    issues.push(
+      ...result.issues.map((issue) => ({
+        ...issue,
+        sourceName: name,
+      }))
+    );
+
+    result.accounts.forEach((account) => {
+      const identity = `${account.email}\u0000${account.password}\u0000${account.secret}`;
+      if (seen.has(identity)) {
+        duplicateCount += 1;
+        return;
+      }
+
+      seen.add(identity);
+      accounts.push(account);
+    });
   });
 
   if (accounts.length > ACCOUNT_POOL_MAX_ACCOUNTS) {
