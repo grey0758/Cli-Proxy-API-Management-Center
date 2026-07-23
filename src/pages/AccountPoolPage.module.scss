@@ -616,6 +616,265 @@
   transition: width 180ms linear;
 }
 
+.phoneBindingPanel {
+  margin-top: 11px;
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 20%, var(--border-color));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--bg-primary) 76%, var(--primary-color) 3%);
+}
+
+.phoneBindingHead {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+
+  > div {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  > div > span {
+    color: var(--text-tertiary);
+    font-size: 10px;
+  }
+
+  strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.phoneBindingIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary-color) 12%, var(--bg-secondary));
+  color: var(--primary-color);
+}
+
+.phoneCountBadge {
+  padding: 4px 7px;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--primary-color) 22%, var(--border-color));
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.phoneBindingActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+  flex-wrap: wrap;
+
+  :global(.btn) {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+}
+
+.phoneDisabledHint {
+  display: block;
+  margin-top: 7px;
+  color: var(--warning-color);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.smsResponse {
+  margin-top: 10px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--success-color) 20%, var(--border-color));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-secondary) 82%, transparent);
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--text-tertiary);
+    font-size: 10px;
+
+    strong {
+      color: var(--text-primary);
+    }
+  }
+
+  pre {
+    max-height: 200px;
+    margin: 8px 0;
+    padding: 8px;
+    overflow: auto;
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 10px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  small {
+    color: var(--text-tertiary);
+    font-size: 9px;
+  }
+}
+
+.phoneWarning {
+  display: flex;
+  padding: 11px 13px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--warning-color) 42%, var(--border-color));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--warning-color) 8%, var(--bg-primary));
+  color: var(--warning-color);
+  font-size: 12px;
+}
+
+.phoneModal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  > p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+}
+
+.phoneSearch {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  > svg {
+    position: absolute;
+    left: 12px;
+    color: var(--text-tertiary);
+    pointer-events: none;
+  }
+
+  input {
+    width: 100%;
+    height: 42px;
+    padding: 0 13px 0 39px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    outline: none;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font: inherit;
+
+    &:focus {
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 14%, transparent);
+    }
+  }
+}
+
+.phoneChoices {
+  display: grid;
+  max-height: 360px;
+  gap: 7px;
+  overflow: auto;
+
+  button {
+    display: flex;
+    width: 100%;
+    padding: 11px 12px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 9px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--primary-color) 38%, var(--border-color));
+      background: var(--bg-hover);
+    }
+
+    > span:first-child {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    strong {
+      font-family: $font-mono;
+      font-size: 13px;
+    }
+
+    small {
+      color: var(--text-tertiary);
+      font-size: 10px;
+    }
+  }
+
+  .phoneChoiceSelected {
+    border-color: var(--primary-color);
+    background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-secondary));
+
+    .radioMark {
+      border-color: var(--primary-color);
+
+      &::after {
+        background: var(--primary-color);
+      }
+    }
+  }
+}
+
+.radioMark {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+
+  &::after {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    content: '';
+  }
+}
+
+.phoneModalEmpty {
+  padding: 30px 14px;
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
 .noMatches {
   padding: 64px 20px;
   color: var(--text-secondary);
@@ -718,6 +977,12 @@
     }
   }
 
+  .phoneBindingActions {
+    :global(.btn) {
+      flex-basis: calc(50% - 6px);
+    }
+  }
+
   .summary {
     align-items: flex-start;
     flex-direction: column;
@@ -757,6 +1022,15 @@
 
   .copyHint {
     display: none;
+  }
+
+  .phoneBindingActions {
+    align-items: stretch;
+    flex-direction: column;
+
+    :global(.btn) {
+      width: 100%;
+    }
   }
 
   .otpCode {

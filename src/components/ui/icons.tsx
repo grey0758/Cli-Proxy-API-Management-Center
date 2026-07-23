@@ -463,6 +463,17 @@ export function IconSidebarAccountPool({ size = 20, ...props }: IconProps) {
   );
 }
 
+export function IconPhone({ size = 20, ...props }: IconProps) {
+  return (
+    <svg {...baseSvgProps} width={size} height={size} {...props}>
+      <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+      <path d="M12 18h.01" />
+    </svg>
+  );
+}
+
+export const IconSidebarPhonePool = IconPhone;
+
 export function IconSidebarOauth({ size = 20, ...props }: IconProps) {
   return (
     <svg {...baseSvgProps} width={size} height={size} {...props}>

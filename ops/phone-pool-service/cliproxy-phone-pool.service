@@ -1,0 +1,40 @@
+[Unit]
+Description=CLIProxy private phone pool service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/python3 /opt/cliproxy-phone-pool/phone_pool_service.py
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PHONE_POOL_LISTEN_HOST=127.0.0.1
+Environment=PHONE_POOL_LISTEN_PORT=18317
+Environment=PHONE_POOL_STATE_PATH=/var/lib/cliproxy-private/phone-pool.json
+Environment=PHONE_POOL_ACCOUNT_SNAPSHOT_PATH=/var/lib/cliproxy-private/account-pool.json
+Restart=on-failure
+RestartSec=2s
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+ReadOnlyPaths=/opt/cliproxy-phone-pool
+ReadWritePaths=/var/lib/cliproxy-private
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

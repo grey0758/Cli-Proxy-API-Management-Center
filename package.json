@@ -10,8 +10,9 @@
     "build:account-pool-snapshot": "bun scripts/build-account-pool-snapshot.ts",
     "preview": "vite preview",
     "test": "bun test",
+    "test:phone-pool-service": "python3 -m unittest discover -s tests/python -v",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives",
-    "verify": "bun run test && bun run lint && bun run build",
+    "verify": "bun run test && bun run test:phone-pool-service && bun run lint && bun run build",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,scss}\"",
     "type-check": "tsc --noEmit"
   },

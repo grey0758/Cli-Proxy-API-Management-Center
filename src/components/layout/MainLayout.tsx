@@ -17,6 +17,7 @@ import { pluginsApi } from '@/services/api';
 import {
   IconSidebarAuthFiles,
   IconSidebarAccountPool,
+  IconSidebarPhonePool,
   IconSidebarConfig,
   IconSidebarDashboard,
   IconSidebarLogs,
@@ -55,6 +56,7 @@ const sidebarIcons: Record<string, ReactNode> = {
   aiProviders: <IconSidebarProviders size={18} />,
   authFiles: <IconSidebarAuthFiles size={18} />,
   accountPool: <IconSidebarAccountPool size={18} />,
+  phonePool: <IconSidebarPhonePool size={18} />,
   oauth: <IconSidebarOauth size={18} />,
   quota: <IconSidebarQuota size={18} />,
   plugins: <IconSidebarPlugins size={18} />,
@@ -559,6 +561,12 @@ export function MainLayout() {
           labelKey: 'nav.account_pool',
           metaKey: 'nav_meta.account_pool',
           icon: sidebarIcons.accountPool,
+        },
+        {
+          path: '/phone-pool',
+          labelKey: 'nav.phone_pool',
+          metaKey: 'nav_meta.phone_pool',
+          icon: sidebarIcons.phonePool,
         },
         {
           path: '/oauth',

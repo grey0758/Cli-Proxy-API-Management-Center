@@ -14,6 +14,7 @@ import {
   IconEye,
   IconEyeOff,
   IconFileText,
+  IconPhone,
   IconPlus,
   IconRefreshCw,
   IconSearch,
@@ -29,7 +30,14 @@ import {
   type AccountPoolNamedSource,
 } from '@/features/accountPool/accountPool';
 import { formatTotp, generateTotp, TOTP_PERIOD_SECONDS } from '@/features/accountPool/totp';
+import {
+  findPhoneBinding,
+  PhonePoolPayloadError,
+  type PhonePoolSmsResponse,
+  type PhonePoolSnapshot,
+} from '@/features/phonePool/phonePool';
 import { accountPoolApi } from '@/services/api/accountPool';
+import { phonePoolApi } from '@/services/api/phonePool';
 import { useAccountPoolStore, useNotificationStore } from '@/stores';
 import { copyToClipboard } from '@/utils/clipboard';
 import styles from './AccountPoolPage.module.scss';
@@ -73,6 +81,14 @@ export function AccountPoolPage() {
   const [importError, setImportError] = useState('');
   const [pageError, setPageError] = useState('');
   const [serverLoading, setServerLoading] = useState(true);
+  const [phoneSnapshot, setPhoneSnapshot] = useState<PhonePoolSnapshot | null>(null);
+  const [phonePoolError, setPhonePoolError] = useState('');
+  const [phonePoolLoading, setPhonePoolLoading] = useState(true);
+  const [bindingAccountEmail, setBindingAccountEmail] = useState('');
+  const [bindingSearch, setBindingSearch] = useState('');
+  const [selectedPhoneId, setSelectedPhoneId] = useState('');
+  const [phoneActionBusy, setPhoneActionBusy] = useState('');
+  const [smsResponses, setSmsResponses] = useState<Record<string, PhonePoolSmsResponse>>({});
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 250);
@@ -199,6 +215,121 @@ export function AccountPoolPage() {
   useEffect(() => {
     void loadServerSnapshot(false);
   }, [loadServerSnapshot]);
+
+  const loadPhoneSnapshot = useCallback(async () => {
+    setPhonePoolLoading(true);
+    setPhonePoolError('');
+    try {
+      setPhoneSnapshot(await phonePoolApi.getSnapshot());
+    } catch (error) {
+      setPhonePoolError(
+        error instanceof PhonePoolPayloadError
+          ? t('account_pool.phone_errors.invalid_payload')
+          : t('account_pool.phone_errors.load_failed')
+      );
+    } finally {
+      setPhonePoolLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void loadPhoneSnapshot();
+  }, [loadPhoneSnapshot]);
+
+  const phoneById = useMemo(
+    () => new Map((phoneSnapshot?.phones ?? []).map((phone) => [phone.id, phone])),
+    [phoneSnapshot]
+  );
+
+  const selectablePhones = useMemo(() => {
+    const query = bindingSearch.trim().toLocaleLowerCase();
+    return (phoneSnapshot?.phones ?? []).filter(
+      (phone) => phone.enabled && (!query || phone.number.toLocaleLowerCase().includes(query))
+    );
+  }, [bindingSearch, phoneSnapshot]);
+
+  const openBindingModal = useCallback(
+    (accountEmail: string) => {
+      const binding = findPhoneBinding(phoneSnapshot, accountEmail);
+      const currentPhone = binding ? phoneById.get(binding.phoneId) : undefined;
+      setBindingAccountEmail(accountEmail);
+      setSelectedPhoneId(currentPhone?.enabled ? currentPhone.id : '');
+      setBindingSearch('');
+    },
+    [phoneById, phoneSnapshot]
+  );
+
+  const closeBindingModal = useCallback(() => {
+    if (phoneActionBusy) return;
+    setBindingAccountEmail('');
+    setSelectedPhoneId('');
+    setBindingSearch('');
+  }, [phoneActionBusy]);
+
+  const handleBindPhone = useCallback(async () => {
+    if (!bindingAccountEmail || !selectedPhoneId) return;
+    setPhoneActionBusy(bindingAccountEmail);
+    try {
+      setPhoneSnapshot(await phonePoolApi.bind(bindingAccountEmail, selectedPhoneId));
+      showNotification(t('account_pool.phone_notifications.bound'), 'success');
+      setBindingAccountEmail('');
+      setSelectedPhoneId('');
+      setBindingSearch('');
+    } catch {
+      showNotification(t('account_pool.phone_errors.bind_failed'), 'error');
+    } finally {
+      setPhoneActionBusy('');
+    }
+  }, [bindingAccountEmail, selectedPhoneId, showNotification, t]);
+
+  const handleUnbindPhone = useCallback(
+    (accountEmail: string) => {
+      showConfirmation({
+        title: t('account_pool.phone_unbind_confirm_title'),
+        message: t('account_pool.phone_unbind_confirm_message'),
+        confirmText: t('account_pool.phone_unbind'),
+        variant: 'danger',
+        onConfirm: () => {
+          setPhoneActionBusy(accountEmail);
+          void phonePoolApi
+            .unbind(accountEmail)
+            .then((next) => {
+              setPhoneSnapshot(next);
+              setSmsResponses((current) => {
+                const updated = { ...current };
+                delete updated[accountEmail.toLocaleLowerCase()];
+                return updated;
+              });
+              showNotification(t('account_pool.phone_notifications.unbound'), 'success');
+            })
+            .catch(() => {
+              showNotification(t('account_pool.phone_errors.unbind_failed'), 'error');
+            })
+            .finally(() => setPhoneActionBusy(''));
+        },
+      });
+    },
+    [showConfirmation, showNotification, t]
+  );
+
+  const handleRequestSms = useCallback(
+    async (accountEmail: string) => {
+      setPhoneActionBusy(accountEmail);
+      try {
+        const response = await phonePoolApi.requestCode({ accountEmail });
+        setSmsResponses((current) => ({
+          ...current,
+          [accountEmail.toLocaleLowerCase()]: response,
+        }));
+        showNotification(t('account_pool.phone_notifications.response_received'), 'success');
+      } catch {
+        showNotification(t('account_pool.phone_errors.request_failed'), 'error');
+      } finally {
+        setPhoneActionBusy('');
+      }
+    },
+    [showNotification, t]
+  );
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -338,6 +469,19 @@ export function AccountPoolPage() {
       </div>
 
       {pageError && <div className={styles.errorBox}>{pageError}</div>}
+      {phonePoolError && (
+        <div className={styles.phoneWarning}>
+          <span>{phonePoolError}</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void loadPhoneSnapshot()}
+            disabled={phonePoolLoading}
+          >
+            {t('account_pool.phone_retry')}
+          </Button>
+        </div>
+      )}
 
       {serverLoading && accounts.length === 0 ? (
         <section className={styles.emptyPanel} aria-live="polite">
@@ -440,6 +584,11 @@ export function AccountPoolPage() {
                 const originalIndex = accounts.findIndex((item) => item.id === account.id);
                 const totp = totpByAccount.get(account.id);
                 const fullLine = `${account.email}|${account.password}|${account.secret}`;
+                const phoneBinding = findPhoneBinding(phoneSnapshot, account.email);
+                const boundPhone = phoneBinding ? phoneById.get(phoneBinding.phoneId) : undefined;
+                const smsResponse = smsResponses[account.email.toLocaleLowerCase()];
+                const phoneBusy = phoneActionBusy === account.email;
+                const phoneActionsBlocked = Boolean(phoneActionBusy);
 
                 return (
                   <article className={styles.accountCard} key={account.id}>
@@ -542,6 +691,83 @@ export function AccountPoolPage() {
                       </span>
                       <span className={styles.otpProgress} aria-hidden="true" />
                     </button>
+
+                    <div className={styles.phoneBindingPanel}>
+                      <div className={styles.phoneBindingHead}>
+                        <span className={styles.phoneBindingIcon}>
+                          <IconPhone size={17} />
+                        </span>
+                        <div>
+                          <span>{t('account_pool.phone_binding_title')}</span>
+                          <strong>
+                            {boundPhone
+                              ? boundPhone.number
+                              : phonePoolLoading
+                                ? t('account_pool.phone_loading')
+                                : t('account_pool.phone_unbound')}
+                          </strong>
+                        </div>
+                        {boundPhone && (
+                          <span className={styles.phoneCountBadge}>
+                            {t('account_pool.phone_binding_count', {
+                              count: boundPhone.bindingCount,
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      <div className={styles.phoneBindingActions}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={
+                            phonePoolLoading || Boolean(phonePoolError) || phoneActionsBlocked
+                          }
+                          onClick={() => openBindingModal(account.email)}
+                        >
+                          {boundPhone
+                            ? t('account_pool.phone_rebind')
+                            : t('account_pool.phone_select')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          loading={phoneBusy}
+                          disabled={!boundPhone || !boundPhone.enabled || phoneActionsBlocked}
+                          onClick={() => void handleRequestSms(account.email)}
+                        >
+                          {t('account_pool.phone_request_code')}
+                        </Button>
+                        {boundPhone && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={phoneActionsBlocked}
+                            onClick={() => handleUnbindPhone(account.email)}
+                          >
+                            {t('account_pool.phone_unbind')}
+                          </Button>
+                        )}
+                      </div>
+                      {boundPhone && !boundPhone.enabled && (
+                        <small className={styles.phoneDisabledHint}>
+                          {t('account_pool.phone_disabled_hint')}
+                        </small>
+                      )}
+                      {smsResponse && (
+                        <div className={styles.smsResponse} aria-live="polite">
+                          <div>
+                            <strong>{t('account_pool.phone_response_title')}</strong>
+                            <span>
+                              HTTP {smsResponse.providerStatus}
+                              {smsResponse.truncated
+                                ? ` · ${t('account_pool.phone_response_truncated')}`
+                                : ''}
+                            </span>
+                          </div>
+                          <pre>{smsResponse.body || t('account_pool.phone_response_empty')}</pre>
+                          <small>{new Date(smsResponse.fetchedAt).toLocaleString()}</small>
+                        </div>
+                      )}
+                    </div>
                   </article>
                 );
               })}
@@ -592,6 +818,82 @@ export function AccountPoolPage() {
           />
           <span className={styles.pasteHint}>{t('account_pool.format_hint')}</span>
           {importError && <div className={styles.errorBox}>{importError}</div>}
+        </div>
+      </Modal>
+
+      <Modal
+        open={Boolean(bindingAccountEmail)}
+        title={t('account_pool.phone_modal_title')}
+        onClose={closeBindingModal}
+        closeDisabled={Boolean(phoneActionBusy)}
+        width={620}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={closeBindingModal}
+              disabled={Boolean(phoneActionBusy)}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => void handleBindPhone()}
+              disabled={!selectedPhoneId}
+              loading={Boolean(phoneActionBusy)}
+            >
+              {t('account_pool.phone_bind_submit')}
+            </Button>
+          </>
+        }
+      >
+        <div className={styles.phoneModal}>
+          <p>
+            {t('account_pool.phone_modal_description', {
+              email: bindingAccountEmail,
+            })}
+          </p>
+          <label className={styles.phoneSearch}>
+            <span className={styles.visuallyHidden}>{t('account_pool.phone_search_label')}</span>
+            <IconSearch size={17} />
+            <input
+              type="search"
+              value={bindingSearch}
+              onChange={(event) => setBindingSearch(event.target.value)}
+              placeholder={t('account_pool.phone_search_placeholder')}
+              autoComplete="off"
+            />
+          </label>
+          {selectablePhones.length === 0 ? (
+            <div className={styles.phoneModalEmpty}>
+              {phoneSnapshot?.enabledCount
+                ? t('account_pool.phone_no_matches')
+                : t('account_pool.phone_none_available')}
+            </div>
+          ) : (
+            <div className={styles.phoneChoices} role="radiogroup">
+              {selectablePhones.map((phone) => (
+                <button
+                  key={phone.id}
+                  type="button"
+                  className={selectedPhoneId === phone.id ? styles.phoneChoiceSelected : ''}
+                  role="radio"
+                  aria-checked={selectedPhoneId === phone.id}
+                  onClick={() => setSelectedPhoneId(phone.id)}
+                >
+                  <span>
+                    <strong>{phone.number}</strong>
+                    <small>
+                      {t('account_pool.phone_choice_summary', {
+                        count: phone.bindingCount,
+                        current: phone.currentBindings,
+                      })}
+                    </small>
+                  </span>
+                  <span className={styles.radioMark} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
     </div>
