@@ -34,6 +34,14 @@ export interface AccountPoolMultiParseResult {
   duplicateCount: number;
 }
 
+export interface AccountPoolServerSnapshot {
+  version: 1;
+  source: string;
+  updatedAt: string;
+  accounts: PendingAccountInput[];
+  duplicateCount: number;
+}
+
 export type AccountPoolSourceErrorCode =
   'embedded_list_missing' | 'embedded_list_invalid' | 'json_list_invalid' | 'too_many_accounts';
 
@@ -41,6 +49,13 @@ export class AccountPoolSourceError extends Error {
   constructor(public readonly code: AccountPoolSourceErrorCode) {
     super(code);
     this.name = 'AccountPoolSourceError';
+  }
+}
+
+export class AccountPoolSnapshotError extends Error {
+  constructor() {
+    super('server_snapshot_invalid');
+    this.name = 'AccountPoolSnapshotError';
   }
 }
 
@@ -171,4 +186,68 @@ export function parseAccountPoolSources(
   }
 
   return { accounts, issues, duplicateCount };
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Validate the private server snapshot without trusting its JSON shape.
+ * Exact duplicates are removed defensively before the rows reach page state.
+ */
+export function normalizeAccountPoolServerSnapshot(value: unknown): AccountPoolServerSnapshot {
+  if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.accounts)) {
+    throw new AccountPoolSnapshotError();
+  }
+
+  const accounts: PendingAccountInput[] = [];
+  const seen = new Set<string>();
+  let duplicateCount = 0;
+
+  value.accounts.forEach((item) => {
+    if (
+      !isRecord(item) ||
+      typeof item.email !== 'string' ||
+      typeof item.password !== 'string' ||
+      typeof item.secret !== 'string'
+    ) {
+      throw new AccountPoolSnapshotError();
+    }
+
+    const email = item.email.trim();
+    const password = item.password;
+    const secret = item.secret.trim();
+    if (!email || !password || !secret) {
+      throw new AccountPoolSnapshotError();
+    }
+
+    const identity = `${email}\u0000${password}\u0000${secret}`;
+    if (seen.has(identity)) {
+      duplicateCount += 1;
+      return;
+    }
+
+    seen.add(identity);
+    accounts.push({ email, password, secret });
+  });
+
+  if (accounts.length === 0 || accounts.length > ACCOUNT_POOL_MAX_ACCOUNTS) {
+    throw new AccountPoolSnapshotError();
+  }
+
+  const declaredCount = value.count;
+  if (
+    declaredCount !== undefined &&
+    (typeof declaredCount !== 'number' || declaredCount !== value.accounts.length)
+  ) {
+    throw new AccountPoolSnapshotError();
+  }
+
+  return {
+    version: 1,
+    source: typeof value.source === 'string' ? value.source.trim() : '',
+    updatedAt: typeof value.updated_at === 'string' ? value.updated_at : '',
+    accounts,
+    duplicateCount,
+  };
 }

@@ -22,8 +22,9 @@ const emptyState = {
 };
 
 /**
- * Deliberately volatile: pending credentials must never be persisted in
- * localStorage, sessionStorage, backend APIs, or the generated management.html.
+ * Deliberately volatile in the browser: rows may come from the authenticated
+ * private server snapshot or a local file, but are never written to browser
+ * storage or embedded in the generated management.html.
  */
 export const useAccountPoolStore = create<AccountPoolState>((set) => ({
   ...emptyState,

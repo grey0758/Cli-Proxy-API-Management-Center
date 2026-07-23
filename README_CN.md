@@ -79,7 +79,7 @@ bun run build
   - Gemini/Codex/Claude/Vertex 配置（Base URL、Headers、代理、模型别名、排除模型、Prefix）。
   - OpenAI 兼容提供商（多 Key、Header、自助从 `/v1/models` 拉取并导入模型别名、可选浏览器侧 `chat/completions` 测试）。
 - **认证文件**：上传/下载/删除 JSON 凭据，筛选/搜索/分页，标记 runtime-only；查看单个凭据可用模型（依赖后端支持）；管理 OAuth 排除模型（支持 `*` 通配符）；配置 OAuth 模型别名映射。
-- **待导入号池**：导入前可在本地一次选择一份或多份 `cami-list.html`、文本或 JSON 账号清单，按选择顺序合并并去重，支持搜索、敏感字段显隐、复制、移除和 TOTP 验证码。凭据只保留在当前页面内存，刷新或登出后清空；本页不会执行 CLIProxy 导入。
+- **待导入号池**：可从管理鉴权保护的 `/v0/management/account-pool` 接口自动加载服务器私有快照，也可用一份或多份本地 `cami-list.html`、文本或 JSON 清单临时替换。支持搜索、敏感字段显隐、复制、移除和 TOTP 验证码；服务器凭据不会嵌入前端构建或浏览器存储，本页也不会执行 CLIProxy 或 Sub2API 导入。
 - **OAuth**：对 Codex、Anthropic/Claude、Antigravity、Kimi、xAI/Grok 发起 OAuth/设备码流程并轮询状态；支持提交回调 URL 或 xAI/Grok 页面显示的 code；包含 Vertex JSON 凭据导入与 iFlow Cookie 导入。
 - **配额管理**：管理 Claude、Antigravity、Codex、Kimi、xAI/Grok 等提供商的配额上限与使用情况。
 - **日志**：增量拉取日志、自动刷新、搜索、隐藏管理端流量、清空日志；下载请求错误日志文件。

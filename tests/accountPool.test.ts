@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import {
   AccountPoolSourceError,
+  AccountPoolSnapshotError,
   extractAccountPoolLines,
+  normalizeAccountPoolServerSnapshot,
   parseAccountPoolSource,
   parseAccountPoolSources,
 } from '../src/features/accountPool/accountPool';
@@ -145,6 +147,49 @@ describe('pending account pool source parsing', () => {
         { name: 'second.txt', source: source(600, 600) },
       ])
     ).toThrow('too_many_accounts');
+  });
+
+  test('validates and deduplicates an authenticated server snapshot', () => {
+    const snapshot = normalizeAccountPoolServerSnapshot({
+      version: 1,
+      source: 'primary private account pool',
+      updated_at: '2026-07-23T00:00:00.000Z',
+      count: 3,
+      accounts: [
+        {
+          email: 'first@example.com',
+          password: 'pass-1',
+          secret: 'JBSWY3DPEHPK3PXP',
+        },
+        {
+          email: 'first@example.com',
+          password: 'pass-1',
+          secret: 'JBSWY3DPEHPK3PXP',
+        },
+        {
+          email: 'second@example.com',
+          password: 'pass|with|pipes',
+          secret: 'JBSWY3DPEHPK3PXP',
+        },
+      ],
+    });
+
+    expect(snapshot.accounts).toHaveLength(2);
+    expect(snapshot.duplicateCount).toBe(1);
+    expect(snapshot.source).toBe('primary private account pool');
+  });
+
+  test('rejects malformed or empty server snapshots', () => {
+    expect(() =>
+      normalizeAccountPoolServerSnapshot({
+        version: 1,
+        count: 1,
+        accounts: [{ email: 'first@example.com', password: '', secret: 'SECRET' }],
+      })
+    ).toThrow(AccountPoolSnapshotError);
+    expect(() =>
+      normalizeAccountPoolServerSnapshot({ version: 1, count: 0, accounts: [] })
+    ).toThrow(AccountPoolSnapshotError);
   });
 });
 

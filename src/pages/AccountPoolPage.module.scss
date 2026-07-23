@@ -110,6 +110,16 @@
   opacity: 0;
 }
 
+.spinningIcon {
+  animation: account-pool-spin 0.9s linear infinite;
+}
+
+@keyframes account-pool-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .errorBox {
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--danger-color) 55%, var(--border-color));

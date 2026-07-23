@@ -21,12 +21,14 @@ import {
 } from '@/components/ui/icons';
 import {
   ACCOUNT_POOL_MAX_ACCOUNTS,
+  AccountPoolSnapshotError,
   AccountPoolSourceError,
   parseAccountPoolSources,
   type AccountPoolNamedParseIssue,
   type AccountPoolNamedSource,
 } from '@/features/accountPool/accountPool';
 import { formatTotp, generateTotp, TOTP_PERIOD_SECONDS } from '@/features/accountPool/totp';
+import { accountPoolApi } from '@/services/api/accountPool';
 import { useAccountPoolStore, useNotificationStore } from '@/stores';
 import { copyToClipboard } from '@/utils/clipboard';
 import styles from './AccountPoolPage.module.scss';
@@ -67,6 +69,7 @@ export function AccountPoolPage() {
   const [draft, setDraft] = useState('');
   const [importError, setImportError] = useState('');
   const [pageError, setPageError] = useState('');
+  const [serverLoading, setServerLoading] = useState(true);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 250);
@@ -147,6 +150,40 @@ export function AccountPoolPage() {
     },
     [describeSourceError, replaceAccounts, showNotification, t]
   );
+
+  const loadServerSnapshot = useCallback(
+    async (notify = false) => {
+      setServerLoading(true);
+      setPageError('');
+      try {
+        const snapshot = await accountPoolApi.getServerSnapshot();
+        replaceAccounts(snapshot.accounts, t('account_pool.server_source'));
+        setSearch('');
+        setSensitiveVisible(false);
+        if (notify) {
+          showNotification(
+            t('account_pool.notifications.server_loaded', {
+              count: snapshot.accounts.length,
+            }),
+            'success'
+          );
+        }
+      } catch (error) {
+        setPageError(
+          error instanceof AccountPoolSnapshotError
+            ? t('account_pool.errors.server_invalid')
+            : t('account_pool.errors.server_unavailable')
+        );
+      } finally {
+        setServerLoading(false);
+      }
+    },
+    [replaceAccounts, showNotification, t]
+  );
+
+  useEffect(() => {
+    void loadServerSnapshot(false);
+  }, [loadServerSnapshot]);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -240,7 +277,7 @@ export function AccountPoolPage() {
       />
 
       <header className={styles.hero}>
-        <span className={styles.eyebrow}>{t('account_pool.local_badge')}</span>
+        <span className={styles.eyebrow}>{t('account_pool.server_badge')}</span>
         <h1 className={styles.pageTitle}>{t('account_pool.title')}</h1>
         <p className={styles.description}>{t('account_pool.description')}</p>
       </header>
@@ -254,6 +291,14 @@ export function AccountPoolPage() {
       </div>
 
       <div className={styles.sourceActions}>
+        <Button
+          variant="secondary"
+          disabled={serverLoading}
+          onClick={() => void loadServerSnapshot(true)}
+        >
+          <IconRefreshCw size={17} className={serverLoading ? styles.spinningIcon : undefined} />
+          {serverLoading ? t('account_pool.loading_server') : t('account_pool.reload_server')}
+        </Button>
         <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
           <IconFileText size={17} />
           {accounts.length > 0 ? t('account_pool.replace_file') : t('account_pool.load_file')}
@@ -278,7 +323,15 @@ export function AccountPoolPage() {
 
       {pageError && <div className={styles.errorBox}>{pageError}</div>}
 
-      {accounts.length === 0 ? (
+      {serverLoading && accounts.length === 0 ? (
+        <section className={styles.emptyPanel} aria-live="polite">
+          <div className={`${styles.emptyIcon} ${styles.spinningIcon}`} aria-hidden="true">
+            <IconRefreshCw size={30} />
+          </div>
+          <h2>{t('account_pool.loading_server_title')}</h2>
+          <p>{t('account_pool.loading_server_description')}</p>
+        </section>
+      ) : accounts.length === 0 ? (
         <section className={styles.emptyPanel}>
           <div className={styles.emptyIcon} aria-hidden="true">
             <IconFileText size={30} />
