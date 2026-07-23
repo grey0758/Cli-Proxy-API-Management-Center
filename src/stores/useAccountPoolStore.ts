@@ -1,22 +1,22 @@
 import { create } from 'zustand';
-import type { PendingAccountInput } from '@/features/accountPool/accountPool';
+import type { AccountPoolAccountInput } from '@/features/accountPool/accountPool';
 import { generateId } from '@/utils/helpers';
 
-export interface PendingAccount extends PendingAccountInput {
+export interface AccountPoolAccount extends AccountPoolAccountInput {
   id: string;
 }
 
 interface AccountPoolState {
-  accounts: PendingAccount[];
+  accounts: AccountPoolAccount[];
   sourceName: string;
   loadedAt: number | null;
-  replaceAccounts: (accounts: PendingAccountInput[], sourceName?: string) => void;
+  replaceAccounts: (accounts: AccountPoolAccountInput[], sourceName?: string) => void;
   removeAccount: (id: string) => void;
   clearAccounts: () => void;
 }
 
 const emptyState = {
-  accounts: [] as PendingAccount[],
+  accounts: [] as AccountPoolAccount[],
   sourceName: '',
   loadedAt: null as number | null,
 };

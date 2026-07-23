@@ -9,7 +9,7 @@ import {
 } from '../src/features/accountPool/accountPool';
 import { generateTotp, normalizeTotpSecret } from '../src/features/accountPool/totp';
 
-describe('pending account pool source parsing', () => {
+describe('account pool source parsing', () => {
   test('parses the cami-list rawLines array without evaluating its HTML', () => {
     const html = `<!doctype html><script>const rawLines = [
       "first@example.com|pass-1|JBSWY3DPEHPK3PXP",
@@ -24,11 +24,13 @@ describe('pending account pool source parsing', () => {
         email: 'first@example.com',
         password: 'pass-1',
         secret: 'JBSWY3DPEHPK3PXP',
+        status: 'pending',
       },
       {
         email: 'second@example.com',
         password: 'pass|with|pipes',
         secret: 'JBSWY3DPEHPK3PXP',
+        status: 'pending',
       },
     ]);
   });
@@ -160,11 +162,13 @@ describe('pending account pool source parsing', () => {
           email: 'first@example.com',
           password: 'pass-1',
           secret: 'JBSWY3DPEHPK3PXP',
+          status: 'imported',
         },
         {
           email: 'first@example.com',
           password: 'pass-1',
           secret: 'JBSWY3DPEHPK3PXP',
+          status: 'imported',
         },
         {
           email: 'second@example.com',
@@ -177,6 +181,7 @@ describe('pending account pool source parsing', () => {
     expect(snapshot.accounts).toHaveLength(2);
     expect(snapshot.duplicateCount).toBe(1);
     expect(snapshot.source).toBe('primary private account pool');
+    expect(snapshot.accounts.map((account) => account.status)).toEqual(['imported', 'pending']);
   });
 
   test('rejects malformed or empty server snapshots', () => {
@@ -190,10 +195,24 @@ describe('pending account pool source parsing', () => {
     expect(() =>
       normalizeAccountPoolServerSnapshot({ version: 1, count: 0, accounts: [] })
     ).toThrow(AccountPoolSnapshotError);
+    expect(() =>
+      normalizeAccountPoolServerSnapshot({
+        version: 1,
+        count: 1,
+        accounts: [
+          {
+            email: 'first@example.com',
+            password: 'pass',
+            secret: 'JBSWY3DPEHPK3PXP',
+            status: 'unknown',
+          },
+        ],
+      })
+    ).toThrow(AccountPoolSnapshotError);
   });
 });
 
-describe('pending account pool TOTP', () => {
+describe('account pool TOTP', () => {
   test('matches RFC 6238 SHA-1 vectors when reduced to six digits', () => {
     const secret = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
     expect(generateTotp(secret, 59_000)).toBe('287082');

@@ -24,6 +24,7 @@ import {
   AccountPoolSnapshotError,
   AccountPoolSourceError,
   parseAccountPoolSources,
+  type AccountPoolStatus,
   type AccountPoolNamedParseIssue,
   type AccountPoolNamedSource,
 } from '@/features/accountPool/accountPool';
@@ -35,6 +36,7 @@ import styles from './AccountPoolPage.module.scss';
 
 const MAX_SOURCE_BYTES = 2 * 1024 * 1024;
 const ACCEPTED_FILE_TYPES = '.txt,.csv,.json,.html,text/plain,text/html,application/json';
+type AccountPoolFilter = 'all' | AccountPoolStatus;
 
 const maskPassword = (value: string): string => '•'.repeat(Math.min(Math.max(value.length, 8), 16));
 
@@ -63,6 +65,7 @@ export function AccountPoolPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<AccountPoolFilter>('all');
   const [sensitiveVisible, setSensitiveVisible] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [pasteModalOpen, setPasteModalOpen] = useState(false);
@@ -99,13 +102,23 @@ export function AccountPoolPage() {
     return result;
   }, [accounts, currentCounter, t]);
 
+  const statusCounts = useMemo(
+    () => ({
+      all: accounts.length,
+      pending: accounts.filter((account) => account.status === 'pending').length,
+      imported: accounts.filter((account) => account.status === 'imported').length,
+    }),
+    [accounts]
+  );
+
   const visibleAccounts = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return accounts;
-    return accounts.filter((account) =>
-      `${account.email} ${account.password} ${account.secret}`.toLowerCase().includes(query)
-    );
-  }, [accounts, search]);
+    return accounts.filter((account) => {
+      if (statusFilter !== 'all' && account.status !== statusFilter) return false;
+      if (!query) return true;
+      return `${account.email} ${account.password} ${account.secret}`.toLowerCase().includes(query);
+    });
+  }, [accounts, search, statusFilter]);
 
   const describeSourceError = useCallback(
     (error: unknown): string => {
@@ -132,6 +145,7 @@ export function AccountPoolPage() {
 
         replaceAccounts(result.accounts, nextSourceName);
         setSearch('');
+        setStatusFilter('all');
         setSensitiveVisible(false);
         setPageError('');
         showNotification(
@@ -159,6 +173,7 @@ export function AccountPoolPage() {
         const snapshot = await accountPoolApi.getServerSnapshot();
         replaceAccounts(snapshot.accounts, t('account_pool.server_source'));
         setSearch('');
+        setStatusFilter('all');
         setSensitiveVisible(false);
         if (notify) {
           showNotification(
@@ -252,6 +267,7 @@ export function AccountPoolPage() {
       onConfirm: () => {
         clearAccounts();
         setSearch('');
+        setStatusFilter('all');
         setSensitiveVisible(false);
         showNotification(t('account_pool.notifications.cleared'), 'success');
       },
@@ -343,6 +359,26 @@ export function AccountPoolPage() {
       ) : (
         <>
           <section className={styles.toolbar} aria-label={t('account_pool.toolbar_label')}>
+            <div
+              className={styles.statusFilters}
+              role="group"
+              aria-label={t('account_pool.status_filter_label')}
+            >
+              {(['all', 'pending', 'imported'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  className={`${styles.statusFilter} ${
+                    statusFilter === filter ? styles.statusFilterActive : ''
+                  }`}
+                  aria-pressed={statusFilter === filter}
+                  onClick={() => setStatusFilter(filter)}
+                >
+                  <span>{t(`account_pool.filter_${filter}`)}</span>
+                  <span className={styles.filterCount}>{statusCounts[filter]}</span>
+                </button>
+              ))}
+            </div>
             <label className={styles.searchWrap}>
               <span className={styles.visuallyHidden}>{t('account_pool.search_label')}</span>
               <IconSearch size={18} aria-hidden="true" />
@@ -414,8 +450,16 @@ export function AccountPoolPage() {
                             index: String(originalIndex + 1).padStart(2, '0'),
                           })}
                         </span>
-                        <span className={styles.pendingBadge}>
-                          {t('account_pool.pending_badge')}
+                        <span
+                          className={`${styles.statusBadge} ${
+                            account.status === 'imported'
+                              ? styles.importedBadge
+                              : styles.pendingBadge
+                          }`}
+                        >
+                          {account.status === 'imported'
+                            ? t('account_pool.imported_badge')
+                            : t('account_pool.pending_badge')}
                         </span>
                       </div>
                       <div className={styles.cardActions}>

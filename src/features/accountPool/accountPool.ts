@@ -1,9 +1,13 @@
 export const ACCOUNT_POOL_MAX_ACCOUNTS = 1000;
 
-export interface PendingAccountInput {
+export const ACCOUNT_POOL_STATUSES = ['pending', 'imported'] as const;
+export type AccountPoolStatus = (typeof ACCOUNT_POOL_STATUSES)[number];
+
+export interface AccountPoolAccountInput {
   email: string;
   password: string;
   secret: string;
+  status: AccountPoolStatus;
 }
 
 export type AccountPoolParseIssueReason = 'format' | 'empty_field';
@@ -14,7 +18,7 @@ export interface AccountPoolParseIssue {
 }
 
 export interface AccountPoolParseResult {
-  accounts: PendingAccountInput[];
+  accounts: AccountPoolAccountInput[];
   issues: AccountPoolParseIssue[];
   duplicateCount: number;
 }
@@ -29,7 +33,7 @@ export interface AccountPoolNamedParseIssue extends AccountPoolParseIssue {
 }
 
 export interface AccountPoolMultiParseResult {
-  accounts: PendingAccountInput[];
+  accounts: AccountPoolAccountInput[];
   issues: AccountPoolNamedParseIssue[];
   duplicateCount: number;
 }
@@ -38,7 +42,7 @@ export interface AccountPoolServerSnapshot {
   version: 1;
   source: string;
   updatedAt: string;
-  accounts: PendingAccountInput[];
+  accounts: AccountPoolAccountInput[];
   duplicateCount: number;
 }
 
@@ -107,9 +111,12 @@ const isHeaderRow = (line: string): boolean => {
   );
 };
 
+const isAccountPoolStatus = (value: unknown): value is AccountPoolStatus =>
+  ACCOUNT_POOL_STATUSES.some((status) => status === value);
+
 export function parseAccountPoolSource(source: string): AccountPoolParseResult {
   const rows = extractAccountPoolLines(source);
-  const accounts: PendingAccountInput[] = [];
+  const accounts: AccountPoolAccountInput[] = [];
   const issues: AccountPoolParseIssue[] = [];
   const seen = new Set<string>();
   let duplicateCount = 0;
@@ -141,7 +148,7 @@ export function parseAccountPoolSource(source: string): AccountPoolParseResult {
     }
 
     seen.add(identity);
-    accounts.push({ email, password, secret });
+    accounts.push({ email, password, secret, status: 'pending' });
   });
 
   if (accounts.length > ACCOUNT_POOL_MAX_ACCOUNTS) {
@@ -154,7 +161,7 @@ export function parseAccountPoolSource(source: string): AccountPoolParseResult {
 export function parseAccountPoolSources(
   sources: AccountPoolNamedSource[]
 ): AccountPoolMultiParseResult {
-  const accounts: PendingAccountInput[] = [];
+  const accounts: AccountPoolAccountInput[] = [];
   const issues: AccountPoolNamedParseIssue[] = [];
   const seen = new Set<string>();
   let duplicateCount = 0;
@@ -200,7 +207,7 @@ export function normalizeAccountPoolServerSnapshot(value: unknown): AccountPoolS
     throw new AccountPoolSnapshotError();
   }
 
-  const accounts: PendingAccountInput[] = [];
+  const accounts: AccountPoolAccountInput[] = [];
   const seen = new Set<string>();
   let duplicateCount = 0;
 
@@ -217,7 +224,11 @@ export function normalizeAccountPoolServerSnapshot(value: unknown): AccountPoolS
     const email = item.email.trim();
     const password = item.password;
     const secret = item.secret.trim();
+    const status = item.status === undefined ? 'pending' : item.status;
     if (!email || !password || !secret) {
+      throw new AccountPoolSnapshotError();
+    }
+    if (!isAccountPoolStatus(status)) {
       throw new AccountPoolSnapshotError();
     }
 
@@ -228,7 +239,7 @@ export function normalizeAccountPoolServerSnapshot(value: unknown): AccountPoolS
     }
 
     seen.add(identity);
-    accounts.push({ email, password, secret });
+    accounts.push({ email, password, secret, status });
   });
 
   if (accounts.length === 0 || accounts.length > ACCOUNT_POOL_MAX_ACCOUNTS) {
